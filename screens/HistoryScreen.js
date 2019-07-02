@@ -9,7 +9,6 @@ export default class HistoryScreen extends React.Component {
       const value = await AsyncStorage.getItem('dailyCalories');
       if (value !== null) {
       }
-      console.log('hi')
       console.log(value);
     } catch (error) {
       console.log('error: ' + error)
@@ -18,7 +17,6 @@ export default class HistoryScreen extends React.Component {
 
   render() {
     this._retrieveData()
-    console.log('hihihi')
     return (
       <ScrollView style={styles.container}>
 
@@ -28,7 +26,7 @@ export default class HistoryScreen extends React.Component {
 }
 
 HistoryScreen.navigationOptions = {
-  title: 'Links',
+  header: null,
 };
 
 const styles = StyleSheet.create({

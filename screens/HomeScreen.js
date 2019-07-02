@@ -10,6 +10,7 @@ import {
   StatusBar,
   TextInput,
   Picker,
+  KeyboardAvoidingView,
 } from 'react-native'
 import { AsyncStorage } from 'react-native'
 import moment from 'moment'
@@ -22,29 +23,50 @@ export default class HomeScreen extends React.Component {
   state = {
     status: '8 hours',
     caloriesInput: '500',
+    weightInput: '',
     totalDailyCalories: 0,
-    eatFastMode: 'eat',
+    mode: 'fast',
     seconds: 0,
+    todaysDailyCalories: [],
+    firstTimeEatenToday: null,
+    lastTimeEaten: null,
   }
 
   storeEat = async () => {
     try {
-      //AsyncStorage.removeItem('dailyCalories')
       AsyncStorage.getItem('dailyCalories', (err, result) => {
         if (result !== null) {
-          var newCalories = JSON.parse(result)
-          newCalories[moment().toString()] = this.state.caloriesInput;
-          console.log('dailyCalories now', newCalories);
-          AsyncStorage.setItem('dailyCalories', JSON.stringify(newCalories));
+          var newCalories = JSON.parse(result).concat([[moment(), this.state.caloriesInput]])
+          console.log('dailyCalories now', newCalories)
+          AsyncStorage.setItem('dailyCalories', JSON.stringify(newCalories))
+          this.setState({todaysDailyCalories: this.state.todaysDailyCalories.concat(this.state.caloriesInput)})
         } else {
-          var m = new Map()
-          m[moment().toString()] = this.state.caloriesInput
-          AsyncStorage.setItem('dailyCalories', JSON.stringify(m));
-          console.log('not found, creating dailyCalories.');
+          AsyncStorage.setItem('dailyCalories', JSON.stringify([[moment(), this.state.caloriesInput]]))
+          this.setState({todaysDailyCalories: this.state.todaysDailyCalories.concat(this.state.caloriesInput)})
+          console.log('not found, creating dailyCalories.')
+          console.log([[moment(), this.state.caloriesInput]])
         }
       })
     } catch (error) {
       console.log('error storing eat: ', error)
+    }
+  }
+
+  storeWeight = async () => {
+    try {
+      AsyncStorage.getItem('weights', (err, result) => {
+        if (result !== null) {
+          var weights = JSON.parse(result).concat([[moment(), this.state.weightInput]])
+          AsyncStorage.setItem('weights', JSON.stringify(weights))
+          console.log('weights now', weights)
+        } else {
+          console.log('not found, creating weights.')
+          AsyncStorage.setItem('weights', JSON.stringify([[moment(), this.state.weightInput]]))
+          console.log('weights now', [[moment(), this.state.caloriesInput]])
+        }
+      })
+    } catch (error) {
+      console.log('error storing weight: ', error)
     }
   }
 
@@ -53,6 +75,7 @@ export default class HomeScreen extends React.Component {
     var d = moment.duration(ms)
     this.setState({seconds: d / 1000})
 
+    // total daily calories
     AsyncStorage.getItem('totalDailyCalories', (err, result) => {
       if (result !== null) {
         console.log('totalDailyCalories found: ', result);
@@ -60,48 +83,92 @@ export default class HomeScreen extends React.Component {
       } else {
         console.log('totalDailyCalories Not Found, setting to 2000');
         AsyncStorage.setItem('totalDailyCalories', '2000')
+        this.setState({totalDailyCalories: '2000'})
       }
-    });
+    })
+
+    // calories that are from today
+    AsyncStorage.getItem('dailyCalories', (err, result) => {
+      if (result !== null) {
+        console.log('dailyCalories found: ', result);
+        var i = 0
+        dailyCalories = JSON.parse(result)
+        firstTimeEatenToday = ''
+        while ( i < dailyCalories.length && moment(dailyCalories[dailyCalories.length - 1 - i][0]).diff(moment().startOf('day')) / 1000 < 86400 ) {
+          this.setState({todaysDailyCalories: this.state.todaysDailyCalories.concat(dailyCalories[dailyCalories.length - 1 - i][1])})
+          if (firstTimeEatenToday == null) {
+            firstTimeEatenToday = dailyCalories[dailyCalories.length - 1 - i][0]
+            this.setState({firstTimeEatenToday: firstTimeEatenToday})
+          }
+          i += 1
+        }
+        console.log('todays calories: ', this.state.todaysDailyCalories)
+        console.log('first time eaten: ', firstTimeEatenToday)
+        console.log('last time eaten: ', lastTimeEaten                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          )
+      }
+      else {
+        console.log('dailyCalories not found.')
+      }
+    })
   }
 
   render() {
     caloriesList = ['100', '200', '300', '400', '500', '600', '700', '800', '900', '1000', '1100', '1200', '1300', '1400', '1500']
-    if (this.state.eatFastMode == 'eat') {
+    if (this.state.mode != 'fast') {
       color = Colors.blue
     } else {
       color = Colors.red
     }
+    caloriesEatenToday = 0
+    for (i in this.state.todaysDailyCalories) {
+      caloriesEatenToday += parseInt(this.state.todaysDailyCalories[i])
+    }
     return (
       <View style={styles.container}>
 
-        <View style={styles.caloriesContainer}>
-          <Text style={{fontFamily: 'raj-bold', fontSize: 30}}>{2000 - this.state.totalDailyCalories} calories</Text>
-          <Text style={{fontSize: 25}}> left to eat! </Text>
-        </View>
+        { this.state.totalDailyCalories - caloriesEatenToday >= 0 ?
+          <View style={styles.caloriesContainer}>
+            <Text style={{fontFamily: 'raj-bold', fontSize: 30}}>{this.state.totalDailyCalories - caloriesEatenToday} calories</Text>
+            <Text style={{fontSize: 25}}> left to eat! </Text>
+          </View> :
+          <View style={[styles.caloriesContainer, {backgroundColor: Colors.red}]}>
+            <Text style={{fontFamily: 'raj-bold', fontSize: 30}}>{(this.state.totalDailyCalories - caloriesEatenToday) * -1} calories</Text>
+            <Text style={{fontSize: 25}}> overbudget! </Text>
+          </View>
+        }
 
-        <View style={styles.statusContainer}>
-          <CountDown
-            until={this.state.seconds}
-            size={20}
-            digitTxtStyle={{fontFamily: 'raj-reg', color: 'black'}}
-            digitStyle={{backgroundColor: color}}
-            timeLabelStyle={{color: 'black'}}
-            timeToShow={['H', 'M', 'S']}
-            style={{marginBottom: 30}}
-          />
-          { this.state.eatFastMode == 'eat' ?
+        { this.state.mode != 'ready' ?
+          <View style={styles.statusContainer}>
+            <CountDown
+              until={this.state.seconds}
+              size={27}
+              digitTxtStyle={{fontFamily: 'raj-reg', color: 'black'}}
+              digitStyle={{backgroundColor: color}}
+              timeLabelStyle={{color: 'black'}}
+              timeToShow={['H', 'M', 'S']}
+              style={{marginBottom: 30}}
+            />
+            { this.state.mode == 'eat' ?
+              <View style={{flexDirection: 'row'}}>
+                <Text style={{fontSize: 30}}>to </Text>
+                <Text style={{fontFamily: 'raj-bold', fontSize: 30, color: color}}>eat </Text>
+                <Text style={{fontSize: 30}}>left!</Text>
+              </View> :
+              <View style={{flexDirection: 'row'}}>
+                <Text style={{fontSize: 30}}>of </Text>
+                <Text style={{fontFamily: 'raj-bold', fontSize: 30, color: color}}>fasting </Text>
+                <Text style={{fontSize: 30}}>left!</Text>
+              </View>
+            }
+          </View> :
+          <View style={styles.statusContainer}>
             <View style={{flexDirection: 'row'}}>
-              <Text style={{fontSize: 30}}>to </Text>
-              <Text style={{fontFamily: 'raj-bold', fontSize: 30, color: color}}>eat </Text>
-              <Text style={{fontSize: 30}}>left!</Text>
-            </View> :
-            <View style={{flexDirection: 'row'}}>
-              <Text style={{fontSize: 30}}>of </Text>
-              <Text style={{fontFamily: 'raj-bold', fontSize: 30, color: color}}>fasting </Text>
-              <Text style={{fontSize: 30}}>left!</Text>
+              <Text style={{fontSize: 30}}>Ready to</Text>
+              <Text style={{fontFamily: 'raj-bold', fontSize: 30, color: Colors.green}}> eat! </Text>
             </View>
-          }
-        </View>
+          </View>
+        }
+
 
         <View style={styles.eatContainer}>
           <View style={{borderWidth: 1, borderRadius:5}}>
@@ -122,10 +189,17 @@ export default class HomeScreen extends React.Component {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={[styles.weightButton, {backgroundColor: color}]} onPress={this.createProfile}>
-          <Text style={{fontSize: 15}}> Add Weight Measurement </Text>
-        </TouchableOpacity>
-
+        <View style={styles.weightContainer}>
+          <TextInput
+            style={styles.input}
+            onChangeText={val => this.setState({weightInput: val})}
+            keyboardType={'numeric'}
+          />
+          <TouchableOpacity style={[styles.weightButton, {backgroundColor: color}]} onPress={this.storeWeight}>
+            <Text style={{fontSize: 20}}> Weight </Text>
+          </TouchableOpacity>
+        </View>
+	      <KeyboardAvoidingView behavior={'padding'}/>
       </View>
     );
   }
@@ -176,6 +250,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 5,
   },
+  weightContainer: {
+    height: 70,
+    width: 250,
+    flexDirection: 'row',
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: 'black',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 5,
+  },
   eatButton: {
     alignSelf: 'center',
     alignItems: 'center',
@@ -195,7 +280,20 @@ const styles = StyleSheet.create({
     borderColor: 'black',
     borderWidth: 1,
     height: 30,
-    width: 200,
+    width: 80,
     marginLeft: 20,
+  },
+  input: {
+    width: 100,
+    fontFamily: 'raj-reg',
+    fontSize: 20,
+    color: 'black',
+    height: 30,
+    backgroundColor: 'white',
+    margin: 4,
+    padding: 5,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: 'black',
   },
 });
