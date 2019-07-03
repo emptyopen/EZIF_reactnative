@@ -25,11 +25,13 @@ export default class HomeScreen extends React.Component {
     caloriesInput: '500',
     weightInput: '',
     totalDailyCalories: 0,
-    mode: 'fast',
+    mode: 'ready',
     seconds: 0,
     todaysDailyCalories: [],
     firstTimeEatenToday: null,
     lastTimeEaten: null,
+    fastingEndTime: null,
+    eatingEndTime: null,
   }
 
   storeEat = async () => {
@@ -40,6 +42,13 @@ export default class HomeScreen extends React.Component {
           console.log('dailyCalories now', newCalories)
           AsyncStorage.setItem('dailyCalories', JSON.stringify(newCalories))
           this.setState({todaysDailyCalories: this.state.todaysDailyCalories.concat(this.state.caloriesInput)})
+          if (this.state.mode == 'ready') {
+            eatingEndTime = moment()
+            eatingEndTime.add(8, 'hours')
+            console.log('setting eatingEndTime to ', eatingEndTime)
+            AsyncStorage.setItem('eatingEndTime', eatingEndTime)
+            this.setState({'eatingEndTime': eatingEndTime, 'mode': 'eating'})
+          }
         } else {
           AsyncStorage.setItem('dailyCalories', JSON.stringify([[moment(), this.state.caloriesInput]]))
           this.setState({todaysDailyCalories: this.state.todaysDailyCalories.concat(this.state.caloriesInput)})
@@ -70,12 +79,22 @@ export default class HomeScreen extends React.Component {
     }
   }
 
+  updateMode() {
+    if (this.state.fastingEndTime == null && this.state.eatingEndTime == null) {
+      this.setState({mode: 'ready'})
+    } else if (this.state.eatingEndTime == null) {
+      this.setState({mode: 'fasting'})
+    } else {
+      this.setState({mode: 'eating'})
+    }
+    console.log('mode is: ', this.state.mode)
+  }
+
   componentDidMount() {
     var ms = moment().day(7).startOf('day').diff(moment())
     var d = moment.duration(ms)
     this.setState({seconds: d / 1000})
 
-    // total daily calories
     AsyncStorage.getItem('totalDailyCalories', (err, result) => {
       if (result !== null) {
         console.log('totalDailyCalories found: ', result);
@@ -87,6 +106,30 @@ export default class HomeScreen extends React.Component {
       }
     })
 
+    AsyncStorage.getItem('eatingEndTime', (err, result) => {
+      if (result !== null) {
+        console.log('eatingEndTime found: ', result);
+        this.setState({eatingEndTime: result})
+      } else {
+        console.log('eatingEndTime not found or null, setting to null');
+        AsyncStorage.setItem('eatingEndTime', null)
+        this.setState({eatingEndTime: null})
+      }
+      this.updateMode()
+    })
+
+    AsyncStorage.getItem('fastingEndTime', (err, result) => {
+      if (result !== null) {
+        console.log('fastingEndTime found: ', result);
+        this.setState({fastingEndTime: result})
+      } else {
+        console.log('fastingEndTime not found or null, setting to null');
+        AsyncStorage.setItem('fastingEndTime', null)
+        this.setState({fastingEndTime: null})
+      }
+      this.updateMode()
+    })
+
     // calories that are from today
     AsyncStorage.getItem('dailyCalories', (err, result) => {
       if (result !== null) {
@@ -94,7 +137,7 @@ export default class HomeScreen extends React.Component {
         var i = 0
         dailyCalories = JSON.parse(result)
         firstTimeEatenToday = ''
-        while ( i < dailyCalories.length && moment(dailyCalories[dailyCalories.length - 1 - i][0]).diff(moment().startOf('day')) / 1000 < 86400 ) {
+        while ( i < dailyCalories.length && moment(dailyCalories[dailyCalories.length - 1 - i][0]).diff(moment().startOf('day')) / 1000 < 86400 && moment(dailyCalories[dailyCalories.length - 1 - i][0]).diff(moment().startOf('day')) / 1000 > 0 ) {
           this.setState({todaysDailyCalories: this.state.todaysDailyCalories.concat(dailyCalories[dailyCalories.length - 1 - i][1])})
           if (firstTimeEatenToday == null) {
             firstTimeEatenToday = dailyCalories[dailyCalories.length - 1 - i][0]
@@ -104,7 +147,6 @@ export default class HomeScreen extends React.Component {
         }
         console.log('todays calories: ', this.state.todaysDailyCalories)
         console.log('first time eaten: ', firstTimeEatenToday)
-        console.log('last time eaten: ', lastTimeEaten                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          )
       }
       else {
         console.log('dailyCalories not found.')
@@ -113,16 +155,20 @@ export default class HomeScreen extends React.Component {
   }
 
   render() {
+
     caloriesList = ['100', '200', '300', '400', '500', '600', '700', '800', '900', '1000', '1100', '1200', '1300', '1400', '1500']
+
     if (this.state.mode != 'fast') {
       color = Colors.blue
     } else {
       color = Colors.red
     }
+
     caloriesEatenToday = 0
     for (i in this.state.todaysDailyCalories) {
       caloriesEatenToday += parseInt(this.state.todaysDailyCalories[i])
     }
+
     return (
       <View style={styles.container}>
 
@@ -148,7 +194,7 @@ export default class HomeScreen extends React.Component {
               timeToShow={['H', 'M', 'S']}
               style={{marginBottom: 30}}
             />
-            { this.state.mode == 'eat' ?
+            { this.state.mode == 'eating' ?
               <View style={{flexDirection: 'row'}}>
                 <Text style={{fontSize: 30}}>to </Text>
                 <Text style={{fontFamily: 'raj-bold', fontSize: 30, color: color}}>eat </Text>
