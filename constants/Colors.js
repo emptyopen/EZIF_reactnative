@@ -1,5 +1,5 @@
 export default {
-  blue: '#6dceff',
-  red: '#FF8793',
-  green: '#3BB356',
+  blue: '#A4FEFB',
+  red: '#FF9B99',
+  green: '#BAE88B',
 };
