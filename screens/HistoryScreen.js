@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, ScrollView, StyleSheet, FlatList, Platform, StatusBar } from 'react-native';
-import { AsyncStorage } from 'react-native'
+import React from 'react'
+import { View, ScrollView, StyleSheet, FlatList, Platform, StatusBar,
+TouchableOpacity, AsyncStorage} from 'react-native'
 import Colors from '../constants/Colors'
 import Text from '../components/GlobalComponents'
 import moment from 'moment'
@@ -30,16 +30,8 @@ export default class HistoryScreen extends React.Component {
 
   render() {
     return (
-      <ScrollView style={styles.container}>
-        <FlatList
-          data={this.state.dailyCalories}
-          renderItem={({item}) => <Text style={{fontSize: 30}}>{item[0]} {item[1]}</Text>}
-          keyExtractor={(item, index) => index.toString()}
-        />
-        <View>
-          <Text style={{fontSize: 30}}>{moment().format()}</Text>
-        </View>
-      </ScrollView>
+      <View>
+      </View>
     )
   }
 }

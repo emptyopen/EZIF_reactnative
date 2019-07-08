@@ -11,25 +11,35 @@ import {
   TextInput,
   Picker,
   KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native'
 import { AsyncStorage } from 'react-native'
 import moment from 'moment'
-import CountDown from 'react-native-countdown-component'
+import Countdown from '../components/Countdown'
 import Colors from '../constants/Colors'
 import Text from '../components/GlobalComponents'
 
 export default class HomeScreen extends React.Component {
 
-  state = {
-    status: '8 hours',
-    caloriesInput: '200',
-    weightInput: '',
-    totalDailyCalories: 0,
-    mode: 'ready',
-    todaysDailyCalories: [],
-    firstTimeEatenToday: null,
-    fastingEndTime: null,
-    eatingEndTime: null,
+  constructor(props) {
+    super(props)
+    this.state = {
+      isLoading: true,
+      status: '8 hours',
+      caloriesInput: '100',
+      weightInput: '',
+      totalDailyCalories: 0,
+      mode: 'ready',
+      todaysDailyCalories: [],
+      firstTimeEatenToday: null,
+      fastingEndTime: null,
+      eatingEndTime: null,
+      eatingSecondsLeft: null,
+      fastingSecondsLeft: null,
+    }
+    this.storeEat = this.storeEat.bind(this)
+    this.updateMode = this.updateMode.bind(this)
+    this.updateStateMode = this.updateStateMode.bind(this)
   }
 
   storeEat = async () => {
@@ -48,9 +58,10 @@ export default class HomeScreen extends React.Component {
         }
         if (this.state.mode == 'ready') {
           console.log('updating mode to eating')
-          eatingEndTime = moment().add(10, 'second')
+          eatingEndTime = moment().add(8, 'hour')
           AsyncStorage.setItem('eatingEndTime', JSON.stringify(eatingEndTime))
           this.setState({mode: 'eating', eatingEndTime: eatingEndTime})
+          this.updateMode()
         }
       })
     } catch (error) {
@@ -76,15 +87,14 @@ export default class HomeScreen extends React.Component {
     }
   }
 
-  updateMode = async () => {
+  updateMode() {
 
-    console.log('start of updateMode', this.state.fastingEndTime, this.state.eatingEndTime)
+    console.log('entering updateMode', this.state.fastingEndTime, this.state.eatingEndTime)
 
     // check if we should transition from fasting to ready
     if (this.state.fastingEndTime && moment().diff(moment(this.state.fastingEndTime, 'YYYY-MM-DDTHH:mm:ss.SSSZ')) > 0) {
-      fastingEndTime = moment().add(16, 'hours')
       console.log('setting fastingEndTime and eatingEndTime to null')
-      this.setState({fastingEndTime: fastingEndTime, mode: 'ready'})
+      this.setState({eatingEndTime: null, fastingEndTime: null, mode: 'ready'})
       AsyncStorage.setItem('fastingEndTime', null)
       AsyncStorage.setItem('eatingEndTime', null)
       this.updateStateMode()
@@ -92,7 +102,7 @@ export default class HomeScreen extends React.Component {
 
     // check if we should transition from eating to fasting
     if (this.state.eatingEndTime && moment().diff(moment(this.state.eatingEndTime, 'YYYY-MM-DDTHH:mm:ss.SSSZ')) > 0) {
-      fastingEndTime = moment().add(16, 'hours')
+      fastingEndTime = moment().add(16, 'hour')
       console.log('setting fastingEndTime to ', fastingEndTime, ' and eatingEndTime to null')
       this.setState({eatingEndTime: null, fastingEndTime: fastingEndTime, mode: 'fasting'})
       AsyncStorage.setItem('fastingEndTime', JSON.stringify(fastingEndTime))
@@ -100,18 +110,22 @@ export default class HomeScreen extends React.Component {
       this.updateStateMode()
     }
 
-    this.updateStateMode()
+    setTimeout(() => {this.updateStateMode()}, 100)
+    console.log('exiting updateMode')
   }
 
   updateStateMode() {
+    console.log('entering updateStateMode')
+    this.setState({'countdownRunning': false})
     if (this.state.fastingEndTime == null && this.state.eatingEndTime == null) {
-      this.setState({mode: 'ready'})
+      this.setState({mode: 'ready', eatingSecondsLeft: null, fastingSecondsLeft: null})
     } else if (this.state.eatingEndTime == null) {
-      this.setState({mode: 'fasting'})
+      setTimeout(() => {this.setState({mode: 'fasting', fastingSecondsLeft: moment.duration(moment(this.state.fastingEndTime, 'YYYY-MM-DDTHH:mm:ss.SSSZ').diff(moment())) / 1000})}, 1000)
     } else {
-      this.setState({mode: 'eating'})
+      this.setState({mode: 'eating', eatingSecondsLeft: moment.duration(moment(this.state.eatingEndTime, 'YYYY-MM-DDTHH:mm:ss.SSSZ').diff(moment())) / 1000})
     }
-    console.log(' - mode is: ', this.state.mode)
+    this.setState({'countdownRunning': true})
+    console.log('leaving updateStateMode. mode is: ', this.state.mode, 'eating/fasting', this.state.eatingSecondsLeft, this.state.fastingSecondsLeft)
   }
 
   componentDidMount() {
@@ -142,6 +156,10 @@ export default class HomeScreen extends React.Component {
 
     AsyncStorage.getItem('fastingEndTime', (err, fastingEndTime) => {
       if (fastingEndTime !== null) {
+        if (this.state.eatingEndTime == null) {
+          console.log('fastingEndTime found, removing eatingEndTime')
+          this.setState({fastingEndTime: fastingEndTime, mode: 'fasting'})
+        }
         console.log('fastingEndTime found: ', fastingEndTime)
         this.setState({fastingEndTime: fastingEndTime})
       } else {
@@ -151,7 +169,6 @@ export default class HomeScreen extends React.Component {
       }
     })
 
-    // calories that are from today
     AsyncStorage.getItem('dailyCalories', (err, result) => {
       if (result !== null) {
         console.log('dailyCalories found: ', result)
@@ -174,6 +191,7 @@ export default class HomeScreen extends React.Component {
     })
 
     this.updateMode()
+    this.setState({isLoading: false})
   }
 
   render() {
@@ -193,16 +211,15 @@ export default class HomeScreen extends React.Component {
       caloriesEatenToday += parseInt(this.state.todaysDailyCalories[i])
     }
 
-    if (this.state.mode == 'eating') {
-      seconds = moment.duration(moment(this.state.eatingEndTime, 'YYYY-MM-DDTHH:mm:ss.SSSZ').diff(moment())) / 1000
-    } else if (this.state.mode == 'fasting') {
-      seconds = moment.duration(moment(this.state.fastingEndTime, 'YYYY-MM-DDTHH:mm:ss.SSSZ').diff(moment())) / 1000
-    } else {
-      seconds = moment.duration(moment(this.state.eatingEndTime, 'YYYY-MM-DDTHH:mm:ss.SSSZ').diff(moment())) / 1000
-      // todo: make this difference between last eaten and now
+    if(this.state.isLoading){
+      return(
+        <View style={styles.container}>
+          <ActivityIndicator/>
+        </View>
+      )
     }
 
-    console.log(' & rendering with', this.state.mode, this.state.eatingEndTime, this.state.fastingEndTime, moment(), seconds)
+    console.log(' & rendering with', this.state.mode, this.state.eatingEndTime, this.state.fastingEndTime, moment(), this.state.eatingSecondsLeft, this.state.fastingSecondsLeft)
 
     return (
       <View style={styles.container}>
@@ -210,8 +227,8 @@ export default class HomeScreen extends React.Component {
         { this.state.mode != 'ready' ?
           this.state.mode == 'eating' ?
             <View style={styles.statusContainer}>
-              <CountDown
-                until={seconds}
+              <Countdown
+                until={this.state.eatingSecondsLeft}
                 size={27}
                 digitTxtStyle={{fontFamily: 'raj-reg', color: 'black'}}
                 digitStyle={{backgroundColor: color}}
@@ -219,7 +236,6 @@ export default class HomeScreen extends React.Component {
                 timeToShow={['H', 'M', 'S']}
                 style={{marginBottom: 30}}
                 onFinish={this.updateMode}
-                id={'1'}
               />
               <View style={{flexDirection: 'row'}}>
                 <Text style={{fontSize: 30}}>to </Text>
@@ -228,8 +244,8 @@ export default class HomeScreen extends React.Component {
               </View>
             </View>  :
             <View style={styles.statusContainer}>
-              <CountDown
-                until={seconds}
+              <Countdown
+                until={this.state.fastingSecondsLeft}
                 size={27}
                 digitTxtStyle={{fontFamily: 'raj-reg', color: 'black'}}
                 digitStyle={{backgroundColor: color}}
@@ -237,7 +253,6 @@ export default class HomeScreen extends React.Component {
                 timeToShow={['H', 'M', 'S']}
                 style={{marginBottom: 30}}
                 onFinish={this.updateMode}
-                id={'2'}
               />
               <View style={{flexDirection: 'row'}}>
                 <Text style={{fontSize: 30}}>of </Text>

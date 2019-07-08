@@ -5879,6 +5879,11 @@ react-native-countdown-component@^2.5.0:
     prop-types "^15.5.8"
     sprintf-js "^1.1.1"
 
+react-native-countdown-text@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/react-native-countdown-text/-/react-native-countdown-text-1.0.3.tgz#b8c4f8b05061aea93d27db1efc4851eef69261e6"
+  integrity sha512-sNSVPkNdFpIZfwdy3WKbBPxNDNs8G4/sXmxnCTCh93IlxPTRB8AtRAjFgXUPa9gnuPSCWJXeli2Xz86CL68DWw==
+
 react-native-gesture-handler@1.2.1:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/react-native-gesture-handler/-/react-native-gesture-handler-1.2.1.tgz#9c48fb1ab13d29cece24bbb77b1e847eebf27a2b"
@@ -5887,6 +5892,11 @@ react-native-gesture-handler@1.2.1:
     hoist-non-react-statics "^2.3.1"
     invariant "^2.2.2"
     prop-types "^15.5.10"
+
+react-native-ionicons@^4.5.6:
+  version "4.5.6"
+  resolved "https://registry.yarnpkg.com/react-native-ionicons/-/react-native-ionicons-4.5.6.tgz#048d116f6e58dbf12e067bf19959eb26a2d356ac"
+  integrity sha512-cInjQKIR/p48TKiIuEkqyXqSvfSsodz/pPU/s9efWgQxqKDROT2Ep0yjPfAw7GSAWnBzjT1g5319e5VntZ1wMg==
 
 react-native-maps@0.24.2:
   version "0.24.2"
