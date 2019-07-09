@@ -15,6 +15,7 @@ import {
 } from 'react-native'
 import CustomIcon from '../components/CustomIcon'
 import moment from 'moment'
+import DateTimePicker from "react-native-modal-datetime-picker";
 import CountDown from 'react-native-countdown-component'
 import Colors from '../constants/Colors'
 import Text from '../components/GlobalComponents'
@@ -22,12 +23,20 @@ import Text from '../components/GlobalComponents'
 export default class SettingsScreen extends React.Component {
 
   state = {
-    dailyCalories: null,
-    status: '8 hours',
-    caloriesInput: '500',
-    totalCalories: 0,
-    eatFastMode: 'eat',
-    seconds: 0,
+  }
+  constructor(props) {
+    super(props)
+    this.state = {
+      dailyCalories: null,
+      status: '8 hours',
+      caloriesInput: '500',
+      totalCalories: 0,
+      eatFastMode: 'eat',
+      seconds: 0,
+      isDateTimePickerVisible: false,
+      dateTimePickerIndex: null,
+    }
+    this.deleteMeal = this.deleteMeal.bind(this)
   }
 
   _retrieveData = async () => {
@@ -44,7 +53,6 @@ export default class SettingsScreen extends React.Component {
 
   componentDidMount() {
     this._retrieveData()
-    console.log('dailyCalories', this.state.dailyCalories)
   }
 
   resetEat = async () => {
@@ -63,50 +71,45 @@ export default class SettingsScreen extends React.Component {
     }
   }
 
-  addEat17HoursAgo() {
-    fastingEndTime = moment()
-    fastingEndTime.subtract(1, 'hours')
-    AsyncStorage.setItem('eatingEndTime', null)
-    AsyncStorage.setItem('fastingEndTime', JSON.stringify(fastingEndTime))
-    try {
-      AsyncStorage.getItem('dailyCalories', (err, result) => {
-        if (result !== null) {
-          var newCalories = JSON.parse(result).concat([[moment().subtract(17, 'hour'), 765]])
-          AsyncStorage.setItem('dailyCalories', JSON.stringify(newCalories))
-          console.log('dailyCalories now', newCalories)
-        } else {
-          AsyncStorage.setItem('dailyCalories', JSON.stringify([[moment(), this.state.caloriesInput]]))
-          console.log('not found, creating dailyCalories.')
-          console.log([[moment(), this.state.caloriesInput]])
-        }
-      })
-    } catch (error) {
-      console.log('error storing eat: ', error)
-    }
+  showDateTimePicker = (index) => {
+    this.setState({ isDateTimePickerVisible: true, dateTimePickerIndex: index });
   }
 
-  deleteEat(index) {
-    console.log('will delete index', index)
-    try {
-      AsyncStorage.getItem('dailyCalories', (err, result) => {
-        if (result !== null) {
-          var newCalories = JSON.parse(result).concat([[moment(), this.state.caloriesInput]])
-          AsyncStorage.setItem('dailyCalories', JSON.stringify(newCalories))
-          this.setState({todaysDailyCalories: this.state.todaysDailyCalories.concat(this.state.caloriesInput)})
-          console.log('dailyCalories now', newCalories)
-        } else {
-          AsyncStorage.setItem('dailyCalories', JSON.stringify([[moment(), this.state.caloriesInput]]))
-          this.setState({todaysDailyCalories: this.state.todaysDailyCalories.concat(this.state.caloriesInput)})
-          console.log('not found, creating dailyCalories.')
-          console.log([[moment(), this.state.caloriesInput]])
-        }
-      })
-    } catch (error) {
-      console.log('error storing eat: ', error)
-    }
+  hideDateTimePicker = () => {
+    this.setState({ isDateTimePickerVisible: false });
+  }
+
+  handleDatePicked = (date) => {
+    const newCalories = [...this.state.dailyCalories]
+    newCalories[this.state.dateTimePickerIndex][0] = date
+    this.setState({dailyCalories: newCalories})
+    AsyncStorage.setItem('dailyCalories', JSON.stringify(newCalories))
+    this.hideDateTimePicker()
+    console.log('date has been picked', date, this.state.dateTimePickerIndex)
+    // may have to re-sort index if edited meal goes out of bounds
+    // todo: also may need to update eatingEndTime
+  }
+
+  deleteMeal(index) {
+    var newCalories = this.state.dailyCalories.filter(function(meal, i) {
+      return i !== index
+    })
+    this.setState({dailyCalories: newCalories})
+    AsyncStorage.setItem('dailyCalories', JSON.stringify(newCalories))
+    console.log('successfully deleted index', index)
+  }
+
+  updateCalorie(index, val) {
+    const newCalories = [...this.state.dailyCalories]
+    newCalories[index][1] = val
+    this.setState({dailyCalories: newCalories})
+    console.log('hey hey now', newCalories)
+    AsyncStorage.setItem('dailyCalories', JSON.stringify(newCalories))
+    console.log('successfully updated index', index)
   }
 
   render() {
+    //console.log('rendering with', this.state)
     return (
       <View style={styles.container}>
         <TouchableOpacity style={[styles.button, {backgroundColor: color}]} onPress={this.resetEat}>
@@ -115,25 +118,33 @@ export default class SettingsScreen extends React.Component {
         <TouchableOpacity style={[styles.button, {backgroundColor: color}]} onPress={this.resetEverything}>
           <Text style={{fontSize: 20}}> Reset Everything </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, {backgroundColor: color}]} onPress={this.addEat17HoursAgo}>
-          <Text style={{fontSize: 20}}> Add custom meal </Text>
-        </TouchableOpacity>
         <ScrollView style={styles.container}>
           <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
             <Text style={{fontSize: 26}}>#</Text>
-            <Text style={{fontSize: 26}}>          Date         </Text>
+            <Text style={{fontSize: 26}}>         Date        </Text>
+            <Text style={{fontSize: 26}}> Time </Text>
             <Text style={{fontSize: 26}}>Cal's</Text>
             <Text style={{fontSize: 26}}> </Text>
           </View>
           <FlatList
             data={this.state.dailyCalories}
+            extraData={this.state}
             renderItem={({item, index}) =>
               <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
                 <Text style={{fontSize: 24}}>{index}</Text>
-                <Text style={{fontSize: 24}}>{item[0]}</Text>
-                <Text style={{fontSize: 24}}>{item[1]}</Text>
+                <TouchableOpacity onPress={() => this.showDateTimePicker(index)}>
+                  <Text style={{fontSize: 24}}>{moment(item[0]).format('ddd, YYYY-MM-DD')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => this.showDateTimePicker(index)}>
+                  <Text style={{fontSize: 24}}>{moment(item[0]).format('HH:mm')}</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={styles.input}
+                  onEndEditing={val => this.updateCalorie(index, val)}
+                  placeholder={item[1]}
+                />
                 <View style={{flexDirection: 'row'}}>
-                  <TouchableOpacity style={styles.deleteButton} onPress={() => this.deleteEat(index)}>
+                  <TouchableOpacity style={styles.deleteButton} onPress={() => this.deleteMeal(index)}>
                     <CustomIcon size={30} color={Colors.red} name={Platform.OS === 'ios' ? 'ios-trash' : 'md-trash'}/>
                   </TouchableOpacity>
                   <Text>  </Text>
@@ -141,6 +152,12 @@ export default class SettingsScreen extends React.Component {
               </View>
             }
             keyExtractor={(item, index) => index.toString()}
+          />
+          <DateTimePicker
+            isVisible={this.state.isDateTimePickerVisible}
+            onConfirm={this.handleDatePicked}
+            onCancel={this.hideDateTimePicker}
+            mode={'datetime'}
           />
         </ScrollView>
       </View>

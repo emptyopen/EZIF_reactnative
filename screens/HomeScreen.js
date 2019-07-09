@@ -37,12 +37,12 @@ export default class HomeScreen extends React.Component {
       eatingSecondsLeft: null,
       fastingSecondsLeft: null,
     }
-    this.storeEat = this.storeEat.bind(this)
+    this.storeMeal = this.storeMeal.bind(this)
     this.updateMode = this.updateMode.bind(this)
     this.updateStateMode = this.updateStateMode.bind(this)
   }
 
-  storeEat = async () => {
+  storeMeal = async () => {
     try {
       AsyncStorage.getItem('dailyCalories', (err, result) => {
         if (result !== null) {
@@ -183,7 +183,7 @@ export default class HomeScreen extends React.Component {
           }
           i += 1
         }
-        console.log('first time eaten: ', firstTimeEatenToday)
+        console.log('first time eaten: ', firstTimeEatenToday) // can change this to just 'last time eaten'
       }
       else {
         console.log('dailyCalories not found.')
@@ -293,7 +293,7 @@ export default class HomeScreen extends React.Component {
               })}
             </Picker>
           </View>
-          <TouchableOpacity style={[styles.eatButton, {backgroundColor: color}]} onPress={this.storeEat}>
+          <TouchableOpacity style={[styles.eatButton, {backgroundColor: color}]} onPress={this.storeMeal}>
             <Text style={{fontSize: 20}}> Eat </Text>
           </TouchableOpacity>
         </View>
