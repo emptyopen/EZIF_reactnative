@@ -5891,6 +5891,11 @@ react-native-countdown-text@^1.0.3:
   resolved "https://registry.yarnpkg.com/react-native-countdown-text/-/react-native-countdown-text-1.0.3.tgz#b8c4f8b05061aea93d27db1efc4851eef69261e6"
   integrity sha512-sNSVPkNdFpIZfwdy3WKbBPxNDNs8G4/sXmxnCTCh93IlxPTRB8AtRAjFgXUPa9gnuPSCWJXeli2Xz86CL68DWw==
 
+react-native-dialog-input@^1.0.7:
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/react-native-dialog-input/-/react-native-dialog-input-1.0.7.tgz#b2fefb4193d1784b3ae78c4a18d8fd6759466009"
+  integrity sha512-boi++dT2tzV8eCZud5Qe3LY/cdTGfgf93Vy4MFxq3O/4rBehllwCfBn5fhWMuf3JcVlzrk0fBsv/Ny766BiyVA==
+
 react-native-gesture-handler@1.2.1:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/react-native-gesture-handler/-/react-native-gesture-handler-1.2.1.tgz#9c48fb1ab13d29cece24bbb77b1e847eebf27a2b"

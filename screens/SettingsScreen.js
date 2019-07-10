@@ -27,13 +27,14 @@ export default class SettingsScreen extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      dailyCalories: null,
+      dailyCalories: [],
       status: '8 hours',
       caloriesInput: '500',
       totalCalories: 0,
       eatFastMode: 'eat',
       seconds: 0,
       isDateTimePickerVisible: false,
+      isCaloriePickerVisible: false,
       dateTimePickerIndex: null,
     }
     this.deleteMeal = this.deleteMeal.bind(this)
@@ -66,6 +67,7 @@ export default class SettingsScreen extends React.Component {
   resetEverything = async () => {
     try {
       await AsyncStorage.clear()
+      this.setState({dailyCalories: []})
     } catch (error) {
       console.log('error removing everything: ', error)
     }
@@ -79,7 +81,7 @@ export default class SettingsScreen extends React.Component {
     this.setState({ isDateTimePickerVisible: false });
   }
 
-  handleDatePicked = (date) => {
+  updateDateTime = (date) => {
     const newCalories = [...this.state.dailyCalories]
     newCalories[this.state.dateTimePickerIndex][0] = date
     this.setState({dailyCalories: newCalories})
@@ -100,11 +102,12 @@ export default class SettingsScreen extends React.Component {
   }
 
   updateCalorie(index, val) {
+    console.log('hey hey now', index, val)
     const newCalories = [...this.state.dailyCalories]
     newCalories[index][1] = val
     this.setState({dailyCalories: newCalories})
     console.log('hey hey now', newCalories)
-    AsyncStorage.setItem('dailyCalories', JSON.stringify(newCalories))
+    //AsyncStorage.setItem('dailyCalories', JSON.stringify(newCalories))
     console.log('successfully updated index', index)
   }
 
@@ -128,7 +131,7 @@ export default class SettingsScreen extends React.Component {
           </View>
           <FlatList
             data={this.state.dailyCalories}
-            extraData={this.state}
+            extraData={this.state.dailyCalories}
             renderItem={({item, index}) =>
               <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
                 <Text style={{fontSize: 24}}>{index}</Text>
@@ -139,8 +142,7 @@ export default class SettingsScreen extends React.Component {
                   <Text style={{fontSize: 24}}>{moment(item[0]).format('HH:mm')}</Text>
                 </TouchableOpacity>
                 <TextInput
-                  style={styles.input}
-                  onEndEditing={val => this.updateCalorie(index, val)}
+                  onChangeText={val => this.updateCalorie(index, val)}
                   placeholder={item[1]}
                 />
                 <View style={{flexDirection: 'row'}}>
@@ -155,7 +157,7 @@ export default class SettingsScreen extends React.Component {
           />
           <DateTimePicker
             isVisible={this.state.isDateTimePickerVisible}
-            onConfirm={this.handleDatePicked}
+            onConfirm={this.updateDateTime}
             onCancel={this.hideDateTimePicker}
             mode={'datetime'}
           />

@@ -58,7 +58,7 @@ export default class HomeScreen extends React.Component {
         }
         if (this.state.mode == 'ready') {
           console.log('updating mode to eating')
-          eatingEndTime = moment().add(8, 'hour')
+          eatingEndTime = moment().add(8, 'second')
           AsyncStorage.setItem('eatingEndTime', JSON.stringify(eatingEndTime))
           this.setState({mode: 'eating', eatingEndTime: eatingEndTime})
           this.updateMode()
@@ -102,7 +102,7 @@ export default class HomeScreen extends React.Component {
 
     // check if we should transition from eating to fasting
     if (this.state.eatingEndTime && moment().diff(moment(this.state.eatingEndTime, 'YYYY-MM-DDTHH:mm:ss.SSSZ')) > 0) {
-      fastingEndTime = moment().add(16, 'hour')
+      fastingEndTime = moment().add(20, 'second')
       console.log('setting fastingEndTime to ', fastingEndTime, ' and eatingEndTime to null')
       this.setState({eatingEndTime: null, fastingEndTime: fastingEndTime, mode: 'fasting'})
       AsyncStorage.setItem('fastingEndTime', JSON.stringify(fastingEndTime))
